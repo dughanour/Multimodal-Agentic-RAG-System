@@ -3,7 +3,8 @@ from langchain_ollama import ChatOllama
 from src.graph.graph import Graph
 from src.agents.tools import configure_tools
 from src.vectorstore.vectorstore import VectorStore
-from src.embeddings.embedding_service import EmbeddingService
+from src.vectorstore.postgreSQL_vectorDB import PostgreSQLVectorDB
+from src.embeddings.embedding_service import EmbeddingService, NomicEmbeddings
 from langchain_core.runnables import ConfigurableField
 from src.services.llm_factory import llm_factory
 import os
@@ -30,7 +31,7 @@ class ChatService:
         if not hasattr(self, 'initialized'):
             print("🚀 Initializing ChatService and building the agentic graph...")
             self.embedding_service = EmbeddingService()
-            self.vectorstore = self._load_vectorstore()
+            self.vectorstore = self._load_postgresql_vectorstore()
             self.llm = self._initialize_llms()
             
             # Configure the tools with the necessary components
@@ -45,7 +46,8 @@ class ChatService:
             self.initialized = True
             print("✅ ChatService initialized successfully.")
 
-    def _load_vectorstore(self) -> VectorStore:
+
+    def _load_vectorstore(self) -> VectorStore: #//For FAISS
         """Loads the FAISS vector store from the local directory."""
         vs = VectorStore()
         if os.path.exists("./embedded_data/faiss_index"):
@@ -55,6 +57,19 @@ class ChatService:
             # e.g., by initializing an empty store or returning an error.
             print("⚠️ Warning: No existing FAISS index found.")
         return vs
+    
+    def _load_postgresql_vectorstore(self):
+        """Load the PostgreSQL vector store."""
+        connection_string = os.environ.get("DATABASE_URL")
+        if not connection_string:
+            raise ValueError(
+            "DATABASE_URL environment variable is not set. "
+            "Make sure PostgreSQL is running (docker compose up -d) "
+            "and .env contains DATABASE_URL."
+        )
+        embeddings = NomicEmbeddings(embedding_service=self.embedding_service)
+        return PostgreSQLVectorDB(connection_string=connection_string, embeddings=embeddings)
+
 
     def _initialize_llms(self):
         """Initializes the language model using LLMFactory."""

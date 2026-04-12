@@ -696,10 +696,6 @@ class DocumentIngestionPipeline:
                 print(f"Source not found: {src}")
         
         print(f"Total documents processed: {len(docs)}")
-        #for i, doc in enumerate(docs):
-            #if doc.metadata.get("type") == "image":
-                #print(doc.page_content)   
-        #print(f"All documents processed: {docs}")
         return docs
 
 
@@ -849,7 +845,7 @@ class DocumentIngestionPipeline:
         return docs_to_embed, np.array(embeddings)
 
 
-    def process_and_embed_with_summaries(self, sources: List[str], embedding_service: EmbeddingService, llm: Any, strategy: str = "standard", persist_directory: str = "./embedded_data") -> tuple[List[Document], np.ndarray]:
+    def process_and_embed_with_summaries(self, sources: List[str], embedding_service: EmbeddingService, llm: Any, strategy: str = "standard", known_sources: set = None) -> tuple[List[Document], np.ndarray]:
         """
         Load sources, generate summaries for images, split text, and compute embeddings.
         """
@@ -874,18 +870,22 @@ class DocumentIngestionPipeline:
         # All docs that will be passed to the embedding function
         combined_docs: List[Document] = split_text_docs + image_docs
 
-        # --- Check for already embedded docs ---
-        known_sources = set()
-        docs_path = os.path.join(persist_directory, "docs.pkl")
+        # --- Check for already embedded docs --- //For FAISS//
+        # Old: FAISS pickle-based deduplication
+        # known_sources = set()
+        # docs_path = os.path.join(persist_directory, "docs.pkl")
+        # if os.path.exists(docs_path):
+        #     try:
+        #         with open(docs_path,"rb") as f:
+        #             existing_docs = pickle.load(f)
+        #             for d in existing_docs:
+        #                 known_sources.add(d.metadata.get("source"))
+        #     except Exception as e:
+        #         print(f"⚠️ Could not load existing docs: {e}")
 
-        if os.path.exists(docs_path):
-            try:
-                with open(docs_path,"rb") as f:
-                    existing_docs = pickle.load(f)
-                    for d in existing_docs:
-                        known_sources.add(d.metadata.get("source"))
-            except Exception as e:
-                print(f"⚠️ Could not load existing docs: {e}")
+        # New: known_sources is passed by the caller (from PostgreSQL via get_existing_sources())
+        if known_sources is None:
+            known_sources = set()
         
         new_docs = [d for d in combined_docs if d.metadata.get("source") not in known_sources]
 
@@ -969,7 +969,7 @@ class DocumentIngestionPipeline:
         return np.array(embeddings)
 
 
-    def process_and_embed(self, sources: List[str], embedding_service: EmbeddingService, strategy: str = "standard", persist_directory: str = "./embedded_data") -> tuple[List[Document], np.ndarray]:
+    def process_and_embed(self, sources: List[str], embedding_service: EmbeddingService, strategy: str = "standard", known_sources: set = None) -> tuple[List[Document], np.ndarray]:
         """
         Load sources, split only text documents, keep images, then compute embeddings.
 
@@ -997,18 +997,22 @@ class DocumentIngestionPipeline:
         combined_docs: List[Document] = text_docs + image_docs
 
 
-        # === Check for already embedded docs ===
-        known_sources = set()
-        docs_path = os.path.join(persist_directory, "docs.pkl")
+        # === Check for already embedded docs === //For FAISS//
+        # Old: FAISS pickle-based deduplication
+        # known_sources = set()
+        # docs_path = os.path.join(persist_directory, "docs.pkl")
+        # if os.path.exists(docs_path):
+        #     try:
+        #         with open(docs_path,"rb") as f:
+        #             existing_docs = pickle.load(f)
+        #             for d in existing_docs:
+        #                 known_sources.add(d.metadata.get("source"))
+        #     except Exception as e:
+        #         print(f"⚠️ Could not load existing docs: {e}")
 
-        if os.path.exists(docs_path):
-            try:
-                with open(docs_path,"rb") as f:
-                    existing_docs = pickle.load(f)
-                    for d in existing_docs:
-                        known_sources.add(d.metadata.get("source"))
-            except Exception as e:
-                print(f"⚠️ Could not load existing docs: {e}")
+        # New: known_sources is passed by the caller (from PostgreSQL via get_existing_sources())
+        if known_sources is None:
+            known_sources = set()
         
         new_docs = [d for d in combined_docs if d.metadata.get("source") not in known_sources]
 

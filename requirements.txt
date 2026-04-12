@@ -4,6 +4,8 @@ langchain-ollama
 langchain_groq
 langchain-docling
 langchain-tavily
+langchain-postgres
+psycopg[binary]
 langgraph
 transformers
 PyMuPDF

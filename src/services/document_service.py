@@ -1,7 +1,8 @@
 from fastapi import UploadFile
 from src.document_ingestion.document_ingestion_pipeline import DocumentIngestionPipeline
 from src.embeddings.embedding_service import EmbeddingService
-from src.vectorstore.vectorstore import VectorStore
+#from src.vectorstore.vectorstore import VectorStore        //for FAISS
+from src.vectorstore.postgreSQL_vectorDB import PostgreSQLVectorDB
 from .chat_service import  get_chat_service
 import os
 import aiofiles
@@ -17,7 +18,8 @@ class DocumentService:
         # We get the existing instances from the ChatService to ensure we're using
         # the same vectorstore and embedding service as the agent.
         self.chat_service = get_chat_service()
-        self.vectorstore: VectorStore = self.chat_service.vectorstore
+        #self.vectorstore: VectorStore = self.chat_service.vectorstore //For FAISS
+        self.vectorstore: PostgreSQLVectorDB = self.chat_service.vectorstore
         self.embedding_service: EmbeddingService = self.chat_service.embedding_service
         self.ingestion_pipeline = DocumentIngestionPipeline()
         self.upload_dir = "data"
@@ -32,6 +34,7 @@ class DocumentService:
             sources = [url]
             
             new_docs, embeddings = [], []
+            known_sources = self.vectorstore.get_existing_sources()
 
             if strategy == "summarize":
                 llm = self.chat_service.get_llm()
@@ -39,7 +42,8 @@ class DocumentService:
                     sources = sources,
                     embedding_service = self.embedding_service,
                     llm = llm,
-                    strategy = strategy
+                    strategy = strategy,
+                    known_sources = known_sources
                 )
                 
                 
@@ -47,13 +51,14 @@ class DocumentService:
                 new_docs, embeddings = self.ingestion_pipeline.process_and_embed(
                     sources = sources,
                     embedding_service = self.embedding_service,
-                    strategy = "standard"
+                    strategy = "standard",
+                    known_sources = known_sources
                 )
                 
 
             if new_docs and embeddings.any():
                 self.vectorstore.add_documents(new_docs, embeddings)
-                self.vectorstore.save_local("./embedded_data")
+                #self.vectorstore.save_local("./embedded_data") //For FAISS
                 print(f"✅ Successfully processed and embedded content from {url}")
                 return {
                     "message": "URL content processed successfully.",
@@ -95,6 +100,7 @@ class DocumentService:
             print(f"📄 Processing and embedding new document: {file_path} using '{strategy}' strategy.")
 
         new_docs, embeddings = [], []  # Initialize here
+        known_sources = self.vectorstore.get_existing_sources()
 
         try:
             if strategy in ("summarize", "docling"):
@@ -103,13 +109,15 @@ class DocumentService:
                     sources=[file_path],
                     embedding_service=self.embedding_service,
                     llm=llm,
-                    strategy=strategy
+                    strategy=strategy,
+                    known_sources=known_sources
                 )
             else:  # "standard"
                 new_docs, embeddings = self.ingestion_pipeline.process_and_embed(
                     sources=[file_path],
                     embedding_service=self.embedding_service,
-                    strategy="standard"
+                    strategy="standard",
+                    known_sources=known_sources
                 )
         except Exception as e:
             print(f"❌ Error during document embedding: {e}")
@@ -120,7 +128,7 @@ class DocumentService:
         if len(new_docs) > 0:
             print(f"Updating vector store with {len(new_docs)} new document chunks.")
             self.vectorstore.add_documents(new_docs, embeddings)
-            self.vectorstore.save_local("./embedded_data")
+            #self.vectorstore.save_local("./embedded_data") //For FAISS
             print("✅ Vector store updated and saved successfully.")
             return {"message": f"Successfully processed and embedded {file.filename} using '{strategy}' strategy."}
         else:

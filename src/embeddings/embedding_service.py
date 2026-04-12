@@ -1,4 +1,5 @@
 from transformers import AutoModel, AutoImageProcessor, AutoTokenizer
+from langchain_core.embeddings import Embeddings
 from PIL import Image
 import torch.nn.functional as F
 import torch
@@ -70,6 +71,23 @@ class EmbeddingService:
         pooled = F.layer_norm(pooled, normalized_shape=(pooled.shape[1],))
         features = F.normalize(pooled, p=2, dim=1)
         return features.squeeze().cpu().numpy()
+
+
+class NomicEmbeddings(Embeddings):
+    """Adapter that wraps EmbeddingService to satisfy LangChain's Embeddings interface."""
+
+    def __init__(self, embedding_service: EmbeddingService):
+        self.embedding_service = embedding_service
+    
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return [
+            self.embedding_service.embed_text(text).tolist()
+            for text in texts
+        ]
+    
+    def embed_query(self, text: str) -> list[float]:
+        return self.embedding_service.embed_text(text, task_type="search_query").tolist()
+
 
 # uv pip uninstall torch torchvision torchaudio
 # uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
