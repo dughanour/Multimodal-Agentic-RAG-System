@@ -5,8 +5,16 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
+# Import AFTER load_dotenv so DATABASE_URL is available
 from src.api.routes import chat
 from src.api.routes import llm_config
+from src.api.routes import sessions
+from src.models.chat_models import create_tables
+
+# Create database tables
+create_tables()
+
+
 
 app = FastAPI(
     title="Multimodal Agentic RAG API",
@@ -31,6 +39,7 @@ def read_root():
 
 # Include the API router for chat and document endpoints
 app.include_router(chat.router, prefix="/api/v1")
+app.include_router(sessions.router, prefix="/api/v1")
 app.include_router(llm_config.router)
 
 

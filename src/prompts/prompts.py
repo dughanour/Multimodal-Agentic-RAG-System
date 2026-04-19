@@ -6,11 +6,12 @@ MAIN_SUPERVISOR_PROMPT = (
     "IMPORTANT: {custom_instructions}\n"
     "Follow these steps:\n"
     "0. **the request of the user should be forwarded as it is without any modification to the next agent.\n"
-    "1. **Examine the conversation history.** Look at the last message from an agent.\n"
-    "2. **Decide if the task is complete.** If the last message seems to fully and accurately answer the original user query, your response MUST be the word FINISH.\n"
-    "3. **If the task is NOT complete, delegate to a worker.** Based on the original query, choose the best agent to call next. Your response must be one of the following: {agents}.\n\n"
-    "4. **if you call the retrieval_agent and the retrieved documents realted to question don't call the retrieval again and go to supervisor to get the final answer\n"
-    "5. **if the user request not found in the retrieved documents call the web_search_agent to find relavant information and go to supervisor to get the final answer\n"
+    "1. **For greetings or casual messages** (like 'hello', 'hi', 'thanks', etc.) that don't require any information retrieval, respond with FINISH immediately.\n"
+    "2. **Examine the conversation history.** Look at the last message from an agent.\n"
+    "3. **Decide if the task is complete.** If the last message seems to fully and accurately answer the original user query, your response MUST be the word FINISH.\n"
+    "4. **If the task is NOT complete, delegate to a worker.** Based on the original query, choose the best agent to call next. Your response must be one of the following: {agents}.\n\n"
+    "5. **if you call the retrieval_agent and the retrieved documents realted to question don't call the retrieval again and go to supervisor to get the final answer\n"
+    "6. **if the user request not found in the retrieved documents call the web_search_agent to find relavant information and go to supervisor to get the final answer\n"
     "Do not get stuck in a loop. If an agent has provided a good answer, FINISH the task."
 )
 

@@ -3,6 +3,8 @@ from src.services.document_service import DocumentService, get_document_service
 from src.services.chat_service import ChatService, get_chat_service
 from src.agents.tools import configure_retriever_mode
 from src.agents.supervisor import configure_supervisor
+from src.services.session_service import get_session_service
+from langchain_core.messages import HumanMessage, AIMessage
 from pydantic import BaseModel
 import json
 import asyncio 
@@ -120,13 +122,26 @@ async def websocket_chat(
                 if not user_message:
                     continue
 
+                # Save user message to database
+                service = get_session_service()
+                service.add_message(chat_id, "user", user_message)
+
                 # Get the runnable agent from the chat service
                 runnable = chat_service.get_runnable()
 
-                from langchain_core.messages import HumanMessage
-            
-                # The input for the stream is just the new message.
-                input_data = {"messages": [HumanMessage(content=user_message)]}
+                # Load conversation history from database for context
+                history = service.get_messages(chat_id)
+                # Convert history to LangChain format
+                lang_messages = []
+                for msg in history[:-1]:
+                    if msg["role"] == "user":
+                        lang_messages.append(HumanMessage(content=msg["content"]))
+                    elif msg["role"] == "assistant":
+                        lang_messages.append(AIMessage(content=msg["content"]))
+                
+                # Add the new user message to the history
+                lang_messages.append(HumanMessage(content=user_message))
+                input_data = {"messages": lang_messages}
             
                 # Define the configuration for this specific run
                 run_config = {
@@ -167,6 +182,17 @@ async def websocket_chat(
                                 ## For tracing and debugging purpose
                                 print(f"[CHAT_ID: {chat_id}] Sending stream chunk...")
                                 await websocket.send_json({"type": "stream", "data": content_to_send})
+
+                # Save AI response to database
+                if full_response:
+                    service.add_message(chat_id, "assistant", full_response)
+                    
+                    # Auto-generate title based on the conversation
+                    session_messages = service.get_messages(chat_id)
+                    if len(session_messages) <= 2:
+                        title = user_message[:50] + ("..." if len(user_message) > 50 else "")
+                        service.update_session_title(chat_id, title)
+                        await websocket.send_json({"type": "title_update", "data": title})
 
                 print(f"[CHAT_ID: {chat_id}] Sending stream end.")
                 # Send a final message to indicate the end of the stream
