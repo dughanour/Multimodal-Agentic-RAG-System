@@ -1,0 +1,11 @@
+venv/
+__pycache__/
+*.pyc
+.env
+.git/
+data/
+embedded_data/
+pgdata/
+*.egg-info/
+.pytest_cache/
+node_modules/

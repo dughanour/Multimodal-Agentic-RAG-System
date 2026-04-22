@@ -114,3 +114,7 @@ venv.bak/
 embedded_data/
 data/
 utils/
+
+# Docker
+pgdata/
+docker-commands.md

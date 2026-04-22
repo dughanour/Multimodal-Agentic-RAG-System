@@ -1,4 +1,5 @@
 services:
+  # PostgreSQL database with pgvector extension for vector storage + chat persistence
   postgres:
     image: pgvector/pgvector:pg17
     container_name: rag-postgres
@@ -8,14 +9,31 @@ services:
       POSTGRES_PASSWORD: rag_password
       POSTGRES_DB: rag_db
     ports:
-      - "5433:5432"
+      - "5433:5432" # Exposed on 5433 to avoid conflict with local PostgreSQL
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data # Persist data across container restarts
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U rag_user -d rag_db"]
       interval: 10s
       timeout: 5s
       retries: 5
 
+  # FastAPI backend built from Dockerfile
+  backend:
+    build: . # Build image from Dockerfile in current directory
+    container_name: rag-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000" # Access the API at http://localhost:8000
+    env_file:
+      - .env # Load API keys (GROQ, TAVILY)
+    environment:
+      # Override DATABASE_URL for container-to-container networking (uses service name "postgres" instead of localhost)
+      - DATABASE_URL=postgresql+psycopg://rag_user:rag_password@postgres:5432/rag_db
+    depends_on:
+      postgres:
+        condition: service_healthy # Wait for DB to be ready before starting
+
+# Named volume for PostgreSQL data persistence
 volumes:
   pgdata:
