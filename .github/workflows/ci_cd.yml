@@ -67,6 +67,11 @@ jobs:
               run: |
                 docker pull $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
             
+            - name: Create .env file from GitHub Secrets
+              run: |
+                echo "GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}" > .env
+                echo "TAVILY_API_KEY=${{ secrets.TAVILY_API_KEY }}" >> .env
+
             - name: Stop old Docker container
               run: |
                 docker compose down || true
