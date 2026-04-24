@@ -9,3 +9,5 @@ pgdata/
 *.egg-info/
 .pytest_cache/
 node_modules/
+docker-commands.md
+aws-deployment-guide.md

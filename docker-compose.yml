@@ -20,6 +20,7 @@ services:
 
   # FastAPI backend built from Dockerfile
   backend:
+    image: ${IMAGE_NAME:-rag-backend}
     build: . # Build image from Dockerfile in current directory
     container_name: rag-backend
     restart: unless-stopped

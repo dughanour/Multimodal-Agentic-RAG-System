@@ -118,3 +118,4 @@ utils/
 # Docker
 pgdata/
 docker-commands.md
+aws-deployment-guide.md
