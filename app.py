@@ -45,7 +45,7 @@ app.include_router(llm_config.router)
 
 if __name__ == "__main__":
     import uvicorn
-    # To run this API server, execute the following command in your terminal:
+    # To run this APIs server, execute the following command in your terminal:
     # uvicorn src.api.main:app --reload
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
 
